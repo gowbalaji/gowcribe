@@ -83,6 +83,8 @@ def run_transcription(job_id: str, file_path: str) -> None:
                 "message": f"Transcribing part {i + 1} of {total}...",
             }
 
+            chunk_duration = _get_duration(chunk_path)
+
             for attempt in range(3):
                 try:
                     with open(chunk_path, "rb") as f:
@@ -90,7 +92,7 @@ def run_transcription(job_id: str, file_path: str) -> None:
                             file=(Path(chunk_path).name, f),
                             model="whisper-large-v3",
                             language="ta",
-                            response_format="verbose_json",
+                            response_format="text",
                         )
                     break
                 except RateLimitError:
@@ -98,23 +100,18 @@ def run_transcription(job_id: str, file_path: str) -> None:
                         raise
                     time.sleep(60)
 
-            all_text.append(response.text.strip())
+            text = response if isinstance(response, str) else getattr(response, "text", str(response))
+            text = text.strip()
+            all_text.append(text)
 
-            segments = getattr(response, "segments", None) or []
-            for seg in segments:
-                s = seg["start"] if isinstance(seg, dict) else seg.start
-                e = seg["end"] if isinstance(seg, dict) else seg.end
-                t = (seg["text"] if isinstance(seg, dict) else seg.text).strip()
-                if t:
-                    srt_lines.append(f"{srt_idx}")
-                    srt_lines.append(f"{_fmt_srt_time(s + time_offset)} --> {_fmt_srt_time(e + time_offset)}")
-                    srt_lines.append(t)
-                    srt_lines.append("")
-                    srt_idx += 1
+            if text:
+                srt_lines.append(f"{srt_idx}")
+                srt_lines.append(f"{_fmt_srt_time(time_offset)} --> {_fmt_srt_time(time_offset + chunk_duration)}")
+                srt_lines.append(text)
+                srt_lines.append("")
+                srt_idx += 1
 
-            if segments:
-                last = segments[-1]
-                time_offset += last["end"] if isinstance(last, dict) else last.end
+            time_offset += chunk_duration
 
             os.remove(chunk_path)
             if i < total - 1:
