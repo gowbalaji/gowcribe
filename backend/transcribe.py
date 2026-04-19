@@ -102,18 +102,19 @@ def run_transcription(job_id: str, file_path: str) -> None:
 
             segments = getattr(response, "segments", None) or []
             for seg in segments:
-                start = seg.start + time_offset
-                end = seg.end + time_offset
-                text = seg.text.strip()
-                if text:
+                s = seg["start"] if isinstance(seg, dict) else seg.start
+                e = seg["end"] if isinstance(seg, dict) else seg.end
+                t = (seg["text"] if isinstance(seg, dict) else seg.text).strip()
+                if t:
                     srt_lines.append(f"{srt_idx}")
-                    srt_lines.append(f"{_fmt_srt_time(start)} --> {_fmt_srt_time(end)}")
-                    srt_lines.append(text)
+                    srt_lines.append(f"{_fmt_srt_time(s + time_offset)} --> {_fmt_srt_time(e + time_offset)}")
+                    srt_lines.append(t)
                     srt_lines.append("")
                     srt_idx += 1
 
             if segments:
-                time_offset += segments[-1].end
+                last = segments[-1]
+                time_offset += last["end"] if isinstance(last, dict) else last.end
 
             os.remove(chunk_path)
             if i < total - 1:
