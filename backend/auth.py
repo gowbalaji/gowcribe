@@ -49,7 +49,6 @@ async def login():
         "redirect_uri": REDIRECT_URI,
         "response_type": "code",
         "scope": "openid email profile",
-        "access_type": "offline",
         "prompt": "select_account",
     })
     return RedirectResponse(f"{_AUTH_URL}?{params}")
