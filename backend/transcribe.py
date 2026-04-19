@@ -50,7 +50,7 @@ def _split_audio(file_path: str, job_id: str) -> list[str]:
             "-t", str(segment_sec),
             "-ar", "16000",
             "-ac", "1",
-            "-b:a", "32k",
+            "-q:a", "2",
             out, "-y",
         ]
         res = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
